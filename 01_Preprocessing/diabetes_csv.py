@@ -63,7 +63,7 @@ neigh = KNeighborsClassifier(n_neighbors=3)
 neigh.fit(X_train, y_train)
 
 # Aplica o modelo na base de teste
-y_pred = neigh.predict(X_test)
+# y_pred = neigh.predict(X_test)
 
 #realizando previsões com o arquivo de
 print(' - Aplicando modelo e enviando para o servidor')
@@ -74,7 +74,7 @@ data_app = data_app[feature_cols]
 # data_app = scalar.transform(data_app)
 data_app = max_abs_scalar.transform(data_app)
 
-# y_pred = neigh.predict(data_app)
+y_pred = neigh.predict(data_app)
 
 # Enviando previsões realizadas com o modelo para o servidor
 URL = "http://aydanomachado.com/mlclass/01_Preprocessing.php"
