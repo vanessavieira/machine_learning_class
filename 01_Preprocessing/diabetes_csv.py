@@ -10,7 +10,9 @@ no servidor.
 """
 
 import pandas as pd
+import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import Imputer
 import requests
 
 print('\n - Lendo o arquivo com o dataset sobre diabetes')
@@ -18,11 +20,17 @@ data = pd.read_csv('diabetes_dataset.csv')
 
 # Criando X and y par ao algorítmo de aprendizagem de máquina.\
 print(' - Criando X e y para o algoritmo de aprendizagem a partir do arquivo diabetes_dataset')
-# Caso queira modificar as colunas consideradas basta algera o array a seguir.
-feature_cols = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 
+
+# Caso queira modificar as colunas consideradas basta alterar o array a seguir.
+feature_cols = ['Glucose', 'BloodPressure',
                 'Insulin', 'BMI', 'DiabetesPedigreeFunction', 'Age']
 X = data[feature_cols]
 y = data.Outcome
+
+imp = Imputer(missing_values = 'NaN', strategy = 'mean', axis = 0)
+data = imp.fit_transform(data)
+
+# print(data)
 
 # Ciando o modelo preditivo para a base trabalhada
 print(' - Criando modelo preditivo')
@@ -38,7 +46,7 @@ y_pred = neigh.predict(data_app)
 URL = "http://aydanomachado.com/mlclass/01_Preprocessing.php"
 
 #TODO Substituir pela sua chave aqui
-DEV_KEY = "COLOCAR_SUA_KEY_AQUI"
+DEV_KEY = "AV"
 
 # json para ser enviado para o servidor
 data = {'dev_key':DEV_KEY,
