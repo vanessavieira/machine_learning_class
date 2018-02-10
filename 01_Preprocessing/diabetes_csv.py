@@ -13,39 +13,54 @@ import pandas as pd
 import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import Imputer
+from sklearn.preprocessing import Normalizer
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+from sklearn.datasets import make_classification
+from sklearn.ensemble import ExtraTreesClassifier
 import requests
 
 print('\n - Lendo o arquivo com o dataset sobre diabetes')
 data = pd.read_csv('diabetes_dataset.csv')
+data_app = pd.read_csv('diabetes_app.csv')
 
 # Criando X and y par ao algorítmo de aprendizagem de máquina.\
 print(' - Criando X e y para o algoritmo de aprendizagem a partir do arquivo diabetes_dataset')
 
 # Caso queira modificar as colunas consideradas basta alterar o array a seguir.
-feature_cols = ['Glucose', 'BloodPressure',
-                'Insulin', 'BMI', 'DiabetesPedigreeFunction', 'Age']
+feature_cols = ['Glucose', 'BMI', 'Age']
 X = data[feature_cols]
 y = data.Outcome
 
-imp = Imputer(missing_values = 'NaN', strategy = 'mean', axis = 0)
-data = imp.fit_transform(data)
+# Separa os dados entre treinamento e teste utilizando validação cruzada
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.15, random_state = 0)
 
-# print(data)
+imp = Imputer(missing_values = 'NaN', strategy = 'mean', axis = 0)
+
+# Aplica o fit transform no X_train
+X_train = imp.fit_transform(X_train)
+X_test = imp.transform(X_test)
 
 # Ciando o modelo preditivo para a base trabalhada
 print(' - Criando modelo preditivo')
 neigh = KNeighborsClassifier(n_neighbors=3)
-neigh.fit(X, y)
+
+# Faz o treinamento com as bases de treinamento
+neigh.fit(X_train, y_train)
+
+# Aplica o modelo na base de teste
+# y_pred = neigh.predict(x_test)
 
 #realizando previsões com o arquivo de
 print(' - Aplicando modelo e enviando para o servidor')
-data_app = pd.read_csv('diabetes_app.csv')
+
+data_app = data_app[feature_cols]
+
 y_pred = neigh.predict(data_app)
 
 # Enviando previsões realizadas com o modelo para o servidor
 URL = "http://aydanomachado.com/mlclass/01_Preprocessing.php"
 
-#TODO Substituir pela sua chave aqui
 DEV_KEY = "AV"
 
 # json para ser enviado para o servidor
