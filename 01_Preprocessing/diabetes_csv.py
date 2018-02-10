@@ -15,6 +15,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import Imputer
 from sklearn.preprocessing import Normalizer
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MaxAbsScaler
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import make_classification
 from sklearn.ensemble import ExtraTreesClassifier
@@ -33,13 +34,26 @@ X = data[feature_cols]
 y = data.Outcome
 
 # Separa os dados entre treinamento e teste utilizando validação cruzada
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.15, random_state = 0)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.05, random_state = 0)
 
-imp = Imputer(missing_values = 'NaN', strategy = 'mean', axis = 0)
+imp = Imputer(missing_values = 'NaN', strategy = 'median', axis = 0)
 
 # Aplica o fit transform no X_train
 X_train = imp.fit_transform(X_train)
 X_test = imp.transform(X_test)
+
+scalar = MinMaxScaler(feature_range=(0,1))
+normalizer = Normalizer().fit(X_train)
+max_abs_scalar = MaxAbsScaler()
+
+# X_train = normalizer.transform(X_train)
+# X_test = normalizer.transform(X_test)
+
+# X_train = scalar.fit_transform(X_train)
+# X_test = scalar.transform(X_test)
+
+X_train = max_abs_scalar.fit_transform(X_train)
+X_test = max_abs_scalar.transform(X_test)
 
 # Ciando o modelo preditivo para a base trabalhada
 print(' - Criando modelo preditivo')
@@ -49,14 +63,18 @@ neigh = KNeighborsClassifier(n_neighbors=3)
 neigh.fit(X_train, y_train)
 
 # Aplica o modelo na base de teste
-# y_pred = neigh.predict(x_test)
+y_pred = neigh.predict(X_test)
 
 #realizando previsões com o arquivo de
 print(' - Aplicando modelo e enviando para o servidor')
 
 data_app = data_app[feature_cols]
 
-y_pred = neigh.predict(data_app)
+# data_app = normalizer.transform(data_app)
+# data_app = scalar.transform(data_app)
+data_app = max_abs_scalar.transform(data_app)
+
+# y_pred = neigh.predict(data_app)
 
 # Enviando previsões realizadas com o modelo para o servidor
 URL = "http://aydanomachado.com/mlclass/01_Preprocessing.php"
