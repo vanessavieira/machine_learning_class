@@ -57,27 +57,24 @@ def categorical_to_numerical_data(data, data_app):
     return data, data_app
 
 # Separa os dados entre treinamento e teste utilizando validação cruzada
-def create_cross_validation(X, y):
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=0)
+def create_cross_validation(X, y, test_size):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=0)
     return X_train, X_test, y_train, y_test
 
 # Função para normalizar os dados de acordo com seu tipo
 def normalization(X_train, X_test, type):
 
     if type == "min_max":
-        scalar = MinMaxScaler(feature_range=(0, 1))
-        X_train = scalar.fit_transform(X_train)
-        X_test = scalar.transform(X_test)
+        normalizer = MinMaxScaler(feature_range=(0, 1))
 
     elif type == "normalizer":
         normalizer = Normalizer().fit(X_train)
-        X_train = normalizer.transform(X_train)
-        X_test = normalizer.transform(X_test)
 
     elif type == "max_abs":
-        max_abs_scalar = MaxAbsScaler()
-        X_train = max_abs_scalar.fit_transform(X_train)
-        X_test = max_abs_scalar.transform(X_test)
+        normalizer = MaxAbsScaler()
+
+    X_train = normalizer.transform(X_train)
+    X_test = normalizer.transform(X_test)
 
     return X_train, X_test
 
@@ -136,7 +133,7 @@ def baseline_model():
     return model
 
 # Função para criar os modelos e as predições de acordo com seus tipos
-def predict(X_train, y_train, X_test, y_test, type):
+def create_model_and_predict_test(X_train, y_train, X_test, y_test, type):
     if type == "knn":
         print(' - Criando modelo preditivo KNN')
         model = KNeighborsClassifier(n_neighbors=6).fit(X_train, y_train)
@@ -166,7 +163,7 @@ def predict(X_train, y_train, X_test, y_test, type):
 
 # Função para computar métricas de avaliação
 def compute_and_print_metrics(model, predictions, cm):
-    accuracy = model.score(X_test, y_test)
+    accuracy = model.accuracy_score(X_test, y_test)
     precision = precision_score(y_test, predictions, average='macro')
     recall = recall_score(y_test, predictions, average='macro')
     fscore = f1_score(y_test, predictions, average='macro')
@@ -179,7 +176,7 @@ def compute_and_print_metrics(model, predictions, cm):
 # Função para enviar as predições feitas ao servidor
 def send_predictions(X_train, y_train, X_test, y_test, data_app):
     # mudar o tipo para testar com cada modelo
-    model, predictions, cm =  predict(X_train, y_train, X_test, y_test, type= "neuralnet")
+    model, predictions, cm =  create_model_and_predict_test(X_train, y_train, X_test, y_test, type= "neuralnet")
 
     print(' - Aplicando modelo e enviando para o servidor')
     app_predictions = model.predict(data_app)
@@ -201,5 +198,5 @@ def send_predictions(X_train, y_train, X_test, y_test, data_app):
 
 X, y, data_app, class_names, feature_cols = read_data()
 X, data_app = categorical_to_numerical_data(X, data_app)
-X_train, X_test, y_train, y_test = create_cross_validation(X, y)
+X_train, X_test, y_train, y_test = create_cross_validation(X, y, 0.5)
 send_predictions(X_train, y_train, X_test, y_test, data_app)

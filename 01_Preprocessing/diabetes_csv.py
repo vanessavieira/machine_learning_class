@@ -6,7 +6,8 @@ Atividade para trabalhar o pré-processamento dos dados.
 Criação de modelo preditivo para diabetes e envio para verificação de peformance
 no servidor.
 
-@author: Aydano Machado <aydano.machado@gmail.com>
+@authors: Aydano Machado <aydano.machado@gmail.com>
+          Vanessa Vieira <vsv@ic.ufal.br>
 """
 
 import pandas as pd
@@ -20,74 +21,95 @@ from sklearn.model_selection import train_test_split
 from sklearn.datasets import make_classification
 from sklearn.ensemble import ExtraTreesClassifier
 import requests
+from sklearn.metrics import accuracy_score
 
-print('\n - Lendo o arquivo com o dataset sobre diabetes')
-data = pd.read_csv('diabetes_dataset.csv')
-data_app = pd.read_csv('diabetes_app.csv')
+# Lê o arquivo com o dataset
+def read_data():
+    print('\n - Lendo o arquivo com o dataset sobre diabetes')
+    data = pd.read_csv('diabetes_dataset.csv')
+    data_app = pd.read_csv('diabetes_app.csv')
+    feature_cols = ['Glucose', 'BMI', 'Age']
+    X = data[feature_cols]
+    X_app = data_app[feature_cols]
+    y = data.Outcome
 
-# Criando X and y par ao algorítmo de aprendizagem de máquina.\
-print(' - Criando X e y para o algoritmo de aprendizagem a partir do arquivo diabetes_dataset')
-
-# Caso queira modificar as colunas consideradas basta alterar o array a seguir.
-feature_cols = ['Glucose', 'BMI', 'Age']
-X = data[feature_cols]
-y = data.Outcome
+    return data, X_app, X, y, feature_cols
 
 # Separa os dados entre treinamento e teste utilizando validação cruzada
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.05, random_state = 0)
+def create_cross_validation(X, y, test_size):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=0)
 
-imp = Imputer(missing_values = 'NaN', strategy = 'median', axis = 0)
+    return X_train, X_test, y_train, y_test
 
-# Aplica o fit transform no X_train
-X_train = imp.fit_transform(X_train)
-X_test = imp.transform(X_test)
+# Função para adicionar valores em casos de valores faltantes
+def imputer(X_train, X_test, X_app):
+    imp = Imputer(missing_values = 'NaN', strategy = 'median', axis = 0)
+    # Aplica o fit transform no X_train
+    X_train = imp.fit_transform(X_train)
+    X_test = imp.transform(X_test)
+    data_app = imp.transform(X_app)
 
-scalar = MinMaxScaler(feature_range=(0,1))
-normalizer = Normalizer().fit(X_train)
-max_abs_scalar = MaxAbsScaler()
+    return X_train, X_test, X_app
 
-# X_train = normalizer.transform(X_train)
-# X_test = normalizer.transform(X_test)
+# Função para normalizar os dados de acordo com seu tipo max abs
+def normalization(X_train, X_test, X_app, type):
 
-# X_train = scalar.fit_transform(X_train)
-# X_test = scalar.transform(X_test)
+    if type == "min_max":
+        normalizer = MinMaxScaler(feature_range=(0, 1))
 
-X_train = max_abs_scalar.fit_transform(X_train)
-X_test = max_abs_scalar.transform(X_test)
+    elif type == "normalizer":
+        normalizer = Normalizer().fit(X_train)
 
-# Ciando o modelo preditivo para a base trabalhada
-print(' - Criando modelo preditivo')
-neigh = KNeighborsClassifier(n_neighbors=3)
+    elif type == "max_abs":
+        normalizer = MaxAbsScaler()
 
-# Faz o treinamento com as bases de treinamento
-neigh.fit(X_train, y_train)
+    X_train = normalizer.fit_transform(X_train)
+    X_test = normalizer.transform(X_test)
+    data_app = normalizer.transform(X_app)
 
-# Aplica o modelo na base de teste
-# y_pred = neigh.predict(X_test)
+    return X_train, X_test, X_app
 
-#realizando previsões com o arquivo de
-print(' - Aplicando modelo e enviando para o servidor')
+# Criando o modelo preditivo knn para base de treino
+def knn_train(X_train,y_train, X_test, y_test):
 
-data_app = data_app[feature_cols]
+    print(' - Criando modelo preditivo')
+    knn_model = KNeighborsClassifier(n_neighbors=3)
 
-# data_app = normalizer.transform(data_app)
-# data_app = scalar.transform(data_app)
-data_app = max_abs_scalar.transform(data_app)
+    # Faz o treinamento com as bases de treinamento
+    knn_model.fit(X_train, y_train)
+    predictions = knn_model.predict(X_test)
+    accuracy = accuracy_score(y_test, predictions)
+    print(" * Train accuracy: " + str(accuracy))
 
-y_pred = neigh.predict(data_app)
+    return knn_model
 
-# Enviando previsões realizadas com o modelo para o servidor
-URL = "http://aydanomachado.com/mlclass/01_Preprocessing.php"
+# Função para enviar as predições feitas ao servidor
+def send_predictions(X_train, y_train, X_test, y_test, X_app):
+    print(' - Aplicando modelo e enviando para o servidor')
 
-DEV_KEY = "AV"
+    model =  knn_train(X_train, y_train, X_test, y_test)
+    app_predictions = model.predict(X_app)
 
-# json para ser enviado para o servidor
-data = {'dev_key':DEV_KEY,
-        'predictions':pd.Series(y_pred).to_json(orient='values')}
+    URL = "http://aydanomachado.com/mlclass/01_Preprocessing.php"
 
-# Enviando requisição e salvando o objeto resposta
-r = requests.post(url = URL, data = data)
+    DEV_KEY = "AV"
 
-# Extraindo e imprimindo o texto da resposta
-pastebin_url = r.text
-print(" - Resposta do servidor:\n", r.text, "\n")
+    # json para ser enviado para o servidor
+    data = {'dev_key': DEV_KEY,
+            'predictions': pd.Series(app_predictions).to_json(orient='values')}
+
+    # Enviando requisição e salvando o objeto resposta
+    r = requests.post(url=URL, data=data)
+
+    # Extraindo e imprimindo o texto da resposta
+    pastebin_url = r.text
+    print(" - Resposta do servidor:\n", r.text, "\n")
+
+data, X_app, X, y, feature_cols = read_data()
+
+X_train, X_test, y_train, y_test = create_cross_validation(X, y, 0.05)
+X_train, X_test, X_app = imputer(X_train, X_test, X_app)
+X_train, X_test, X_app = normalization(X_train, X_test, X_app, type="max_abs")
+
+send_predictions(X_train, y_train, X_test, y_test, X_app)
+
